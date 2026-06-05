@@ -1,0 +1,4 @@
+-- Script taken from https://xenoscripts.com website --
+
+-- This is a free and keyless script, enjoy (Credits to orialdev)
+loadstring(game:HttpGet('https://pastefy.app/X3jV29RY/raw'))()
