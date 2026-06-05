@@ -1,4 +1,4 @@
 loadstring(game:HttpGet('https://pastefy.app/X3jV29RY/raw'))()
 task.wait(5)
-loadstring(game:HttpGet("https://raw.githubusercontent.com/haiiipplheh/woowmm2scriptwoohooo/refs/heads/main/wow.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/haiiipplheh/mm2script/refs/heads/main/testing-custom"))()
 print("lord")
