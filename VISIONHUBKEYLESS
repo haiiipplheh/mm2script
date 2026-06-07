@@ -1,4 +1,1 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/haiiipplheh/mm2script/refs/heads/main/testing-custom"))()
-print("lord")
-task.wait(.01)
-loadstring(game:HttpGet('https://pastefy.app/X3jV29RY/raw'))()
+loadstring(game:HttpGet('https://cdn.cdnpastebin.com/raw/s_3db7baa4e633'))()
