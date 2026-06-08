@@ -1,3 +1,1 @@
 loadstring(game:HttpGet('https://raw.githubusercontent.com/haiiipplheh/mm2script/refs/heads/main/luau'))()
-wait(1)
-loadstring(game:HttpGet("https://raw.githubusercontent.com/haiiipplheh/woowmm2scriptwoohooo/refs/heads/main/wow.lua"))()
